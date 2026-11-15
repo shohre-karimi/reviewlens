@@ -3,9 +3,10 @@
 venv/
 .env
 
-# Data and model artifacts (never committed)
-data/
-artifacts/
+# Data and model artifacts (never committed).
+# The leading "/" anchors to the project root, so src/reviewlens/data/ (code) is NOT ignored.
+/data/
+/artifacts/
 *.joblib
 *.pkl
 *.npz

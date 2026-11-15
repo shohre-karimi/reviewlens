@@ -13,15 +13,25 @@ dependencies = [
     "typer>=0.12",
     "pydantic>=2.6",
     "PyYAML>=6.0",
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "hazm>=0.12",
 ]
 
 [project.optional-dependencies]
+# Running the EDA notebook (VS Code / Jupyter) and executing it headless.
+notebook = [
+    "ipykernel>=6.29",
+    "nbclient>=0.10",
+    "matplotlib>=3.8",
+]
 dev = [
     "pytest>=8.0",
     "ruff>=0.6",
     "mypy>=1.10",
     "pre-commit>=3.7",
     "types-PyYAML",
+    "pandas-stubs",
 ]
 
 [project.scripts]
@@ -56,6 +66,11 @@ python_version = "3.11"
 strict = true
 plugins = ["pydantic.mypy"]
 files = ["src", "tests"]
+
+# Libraries that ship no type information.
+[[tool.mypy.overrides]]
+module = ["hazm", "hazm.*"]
+ignore_missing_imports = true
 
 # ---------------------------------------------------------------- pytest
 [tool.pytest.ini_options]

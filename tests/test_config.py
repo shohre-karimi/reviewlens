@@ -30,8 +30,19 @@ def test_experiment_override_merges_into_default(
     assert cfg.experiment.name == "quick"
     assert cfg.experiment.seeds == [0, 1]
     # Keys not mentioned in the override keep their default values.
-    assert cfg.experiment.test_size == 0.2
+    assert cfg.experiment.methods == ["logistic_regression", "self_training"]
+    assert cfg.data.test_file == "test.csv"
     assert cfg.task.name == "sentiment"
+
+
+def test_data_file_url_is_pinned_to_revision(default_config_path: Path) -> None:
+    data = load_config(default_config_path).data
+
+    url = data.file_url("train.csv")
+
+    assert url.startswith("https://huggingface.co/datasets/")
+    assert f"/resolve/{data.revision}/train.csv" in url
+    assert data.all_files == ["train.csv", "validation.csv", "test.csv"]
 
 
 def test_deep_merge_merges_nested_dicts_and_replaces_lists() -> None:
@@ -60,7 +71,8 @@ def test_label_fractions_are_sorted(write_yaml: WriteYaml) -> None:
         "experiment:\n  label_fractions: [0.0]\n",  # zero labels makes no sense
         "experiment:\n  label_fractions: [1.5]\n",  # more than 100 %
         "experiment:\n  label_fractions: [0.1, 0.1]\n",  # duplicates
-        "experiment:\n  test_size: 1.0\n",
+        "data:\n  min_text_chars: 0\n",
+        "data:\n  label_map: {GOOD: excellent}\n",  # target label not in task.labels
         "experiment:\n  seeds: []\n",
         "task:\n  labels: [positive, positive]\n",
         "task:\n  labels: [positive]\n",  # need at least two classes

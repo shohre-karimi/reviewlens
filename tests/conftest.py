@@ -7,7 +7,23 @@ from pathlib import Path
 
 import pytest
 
+from reviewlens.config import AppConfig
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
+
+
+@pytest.fixture
+def fixture_config(tmp_path: Path) -> AppConfig:
+    """Default config pointed at the tiny fixture dataset, writing into a temp directory."""
+    return AppConfig.model_validate(
+        {
+            "paths": {
+                "raw_dir": str(FIXTURES_DIR / "raw"),
+                "processed_dir": str(tmp_path / "processed"),
+            }
+        }
+    )
 
 
 @pytest.fixture

@@ -2,7 +2,7 @@
 # Relative paths are resolved from the directory the command runs in (the project root).
 # Unknown keys are rejected, so a typo here fails loudly instead of being ignored.
 
-# Fixes the train/test split, so the test set is identical in every run.
+# Global seed for anything random outside the per-experiment seeds below.
 seed: 42
 
 paths:
@@ -21,9 +21,22 @@ task:
   text_column: text
   label_column: label
 
+# Raw dataset: Snappfood comments on Hugging Face, pinned to one revision.
+# The official test.csv is the fixed test set; train.csv + validation.csv form the training pool.
+data:
+  hf_dataset: ParsiAI/snappfood-sentiment-analysis
+  revision: d5e98012d86c2e368f8e72f636208dae347dec11
+  train_files: [train.csv, validation.csv]
+  test_file: test.csv
+  raw_text_column: comment
+  raw_label_column: label
+  label_map:           # raw label -> task label
+    SAD: negative
+    HAPPY: positive
+  min_text_chars: 2
+
 experiment:
   name: default
-  test_size: 0.2
   label_fractions: [0.01, 0.05, 0.10, 0.20, 1.0]
   seeds: [0, 1, 2, 3, 4]   # vary the labeled/unlabeled masking and model randomness
   methods:

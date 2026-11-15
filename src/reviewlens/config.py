@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 DEFAULT_CONFIG_PATH = Path("configs/default.yaml")
 
@@ -52,9 +52,41 @@ class TaskConfig(_StrictModel):
         return labels
 
 
+class DataConfig(_StrictModel):
+    """Where the raw dataset comes from and how its columns map onto the task schema.
+
+    The defaults point to the Snappfood comments dataset on Hugging Face, pinned to one
+    revision so every download returns exactly the same files.
+    """
+
+    hf_dataset: str = "ParsiAI/snappfood-sentiment-analysis"
+    revision: str = "d5e98012d86c2e368f8e72f636208dae347dec11"
+    # Files merged into the training pool; the test file is the dataset's official test split.
+    train_files: list[str] = Field(
+        default_factory=lambda: ["train.csv", "validation.csv"], min_length=1
+    )
+    test_file: str = "test.csv"
+    raw_text_column: str = "comment"
+    raw_label_column: str = "label"
+    # Raw label value -> task label name. Rows whose raw label is not a key are dropped.
+    label_map: dict[str, str] = Field(
+        default_factory=lambda: {"SAD": "negative", "HAPPY": "positive"}, min_length=1
+    )
+    # Texts shorter than this after normalization are dropped (too short to carry sentiment).
+    min_text_chars: int = Field(default=2, ge=1)
+
+    @property
+    def all_files(self) -> list[str]:
+        return [*self.train_files, self.test_file]
+
+    def file_url(self, filename: str) -> str:
+        return (
+            f"https://huggingface.co/datasets/{self.hf_dataset}/resolve/{self.revision}/{filename}"
+        )
+
+
 class ExperimentConfig(_StrictModel):
     name: str = Field(default="default", min_length=1)
-    test_size: float = Field(default=0.2, gt=0.0, lt=1.0)
     label_fractions: list[float] = Field(
         default_factory=lambda: [0.01, 0.05, 0.10, 0.20, 1.0], min_length=1
     )
@@ -97,9 +129,20 @@ class AppConfig(_StrictModel):
     seed: int = 42
     paths: PathsConfig = Field(default_factory=PathsConfig)
     task: TaskConfig = Field(default_factory=TaskConfig)
+    data: DataConfig = Field(default_factory=DataConfig)
     experiment: ExperimentConfig = Field(default_factory=ExperimentConfig)
     agent: AgentConfig = Field(default_factory=AgentConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
+
+    @model_validator(mode="after")
+    def _label_map_matches_task(self) -> AppConfig:
+        unknown = set(self.data.label_map.values()) - set(self.task.labels)
+        if unknown:
+            raise ValueError(
+                f"data.label_map targets {sorted(unknown)}, which are not in task.labels "
+                f"{self.task.labels}"
+            )
+        return self
 
 
 def read_yaml(path: Path) -> dict[str, Any]:

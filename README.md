@@ -7,7 +7,7 @@ the results.
 > Research question: when only a small fraction of the data is labeled, do semi-supervised
 > methods outperform purely supervised models trained on the labeled fraction alone?
 
-**Status:** phase 1 (scaffold and design). The full README (results, run modes, findings)
+**Status:** phase 2 (data). The full README (results, run modes, findings)
 is written in phase 8.
 
 ## Setup
@@ -28,6 +28,20 @@ py -3.12 -m venv .venv                      # Linux/macOS: python3 -m venv .venv
 .venv\Scripts\python -m pip install -e ".[dev]"   # Linux/macOS: .venv/bin/python
 .venv\Scripts\python -m pytest
 ```
+
+## Data
+
+Snappfood food-delivery comments (binary HAPPY / SAD, ~69.5k reviews) from
+[ParsiAI/snappfood-sentiment-analysis](https://huggingface.co/datasets/ParsiAI/snappfood-sentiment-analysis),
+pinned to one revision in `configs/default.yaml`. The official `test.csv` is the fixed test
+set; `train.csv` + `validation.csv` form the training pool.
+
+```bash
+reviewlens data download   # raw CSVs -> data/raw/ (never committed)
+reviewlens data prepare    # normalize, validate, deduplicate -> data/processed/
+```
+
+Exploration: `notebooks/01_eda.ipynb` (install the extra with `pip install -e ".[notebook]"`).
 
 ## CLI
 

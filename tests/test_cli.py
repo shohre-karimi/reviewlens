@@ -52,6 +52,33 @@ def test_invalid_config_exits_with_clear_error(tmp_path: Path) -> None:
     assert "Invalid configuration" in result.output
 
 
+def test_data_prepare_command_writes_processed_files(tmp_path: Path) -> None:
+    fixtures = Path(__file__).resolve().parent / "fixtures" / "raw"
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        yaml.safe_dump(
+            {"paths": {"raw_dir": str(fixtures), "processed_dir": str(tmp_path / "processed")}}
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["--config", str(config), "data", "prepare"])
+
+    assert result.exit_code == 0, result.output
+    assert "n_final" in result.stdout
+    assert (tmp_path / "processed" / "train.csv").is_file()
+
+
+def test_data_prepare_without_raw_files_fails_cleanly(tmp_path: Path) -> None:
+    config = tmp_path / "config.yaml"
+    config.write_text(yaml.safe_dump({"paths": {"raw_dir": str(tmp_path)}}), encoding="utf-8")
+
+    result = runner.invoke(app, ["--config", str(config), "data", "prepare"])
+
+    assert result.exit_code == 1
+    assert "reviewlens data download" in result.output
+
+
 def test_unimplemented_command_reports_its_phase(default_config_path: Path) -> None:
     result = runner.invoke(app, ["-c", str(default_config_path), "run-experiments"])
 
