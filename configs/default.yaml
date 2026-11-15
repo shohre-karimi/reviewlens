@@ -58,6 +58,22 @@ models:
     C: 1.0
   random_forest:
     n_estimators: 200
+  # Semi-supervised methods (base model: Logistic Regression, same C as the baseline).
+  self_training:
+    threshold: 0.75      # scikit-learn's default
+    max_iter: 10
+    C: 1.0
+  label_spreading:
+    n_neighbors: 7       # scikit-learn's default
+    alpha: 0.2           # scikit-learn's default
+  pseudo_labeling:
+    # With 1 % labels no negative prediction reaches 0.9 (median confidence ~0.57), so a
+    # 0.9 threshold would add nothing; 0.7 was chosen from that label-free confidence
+    # distribution, not from test scores.
+    threshold: 0.7
+    max_iter: 10
+    growth: 1.0          # every class gains the same k labels; labeled set at most doubles
+    C: 1.0
 
 experiment:
   name: default

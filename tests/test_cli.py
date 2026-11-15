@@ -119,8 +119,26 @@ def test_baselines_command_compares_selected_methods(toy_config: AppConfig, tmp_
     assert list(toy_config.paths.results_dir.glob("baselines_*.csv"))
 
 
+def test_run_experiments_command_prints_summary(toy_config: AppConfig, tmp_path: Path) -> None:
+    data = toy_config.model_dump(mode="json")
+    data["experiment"] = {
+        "name": "cli",
+        "methods": ["naive_bayes", "self_training"],
+        "label_fractions": [0.1, 1.0],
+        "seeds": [0],
+    }
+    config = tmp_path / "config.yaml"
+    config.write_text(yaml.safe_dump(data), encoding="utf-8")
+
+    result = runner.invoke(app, ["-c", str(config), "run-experiments"])
+
+    assert result.exit_code == 0, result.output
+    assert "self_training" in result.stdout and "±" in result.stdout
+    assert (toy_config.paths.results_dir / "cli" / "runs.csv").is_file()
+
+
 def test_unimplemented_command_reports_its_phase(default_config_path: Path) -> None:
-    result = runner.invoke(app, ["-c", str(default_config_path), "run-experiments"])
+    result = runner.invoke(app, ["-c", str(default_config_path), "agent", "eval"])
 
     assert result.exit_code == 1
-    assert "phase 4" in result.output
+    assert "phase 6" in result.output

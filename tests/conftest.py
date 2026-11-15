@@ -72,7 +72,11 @@ def toy_config(tmp_path: Path, toy_data: ToyData) -> AppConfig:
                 "results_dir": str(tmp_path / "results"),
             },
             "features": {"min_df": 1, "lsa_components": 5},
-            "models": {"random_forest": {"n_estimators": 20, "n_jobs": 1}},
+            "models": {
+                "random_forest": {"n_estimators": 20, "n_jobs": 1},
+                # 12 labeled toy reviews give low confidences; 0.5 lets pseudo-labeling act.
+                "pseudo_labeling": {"threshold": 0.5},
+            },
         }
     )
 

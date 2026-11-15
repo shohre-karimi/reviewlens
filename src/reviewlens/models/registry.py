@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from reviewlens.features import FeatureKind
-from reviewlens.models import supervised
+from reviewlens.models import semi_supervised, supervised
 from reviewlens.models.base import Classifier
 
 
@@ -34,6 +34,15 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
     ),
     "linear_svm": ModelSpec(supervised.make_linear_svm, "tfidf", False, "Linear SVM (calibrated)"),
     "random_forest": ModelSpec(supervised.make_random_forest, "tfidf", False, "Random Forest"),
+    "self_training": ModelSpec(
+        semi_supervised.make_self_training, "tfidf", True, "Self-Training (Logistic Regression)"
+    ),
+    "label_spreading": ModelSpec(
+        semi_supervised.make_label_spreading, "lsa", True, "Label Spreading (kNN graph on LSA)"
+    ),
+    "pseudo_labeling": ModelSpec(
+        semi_supervised.make_pseudo_labeling, "tfidf", True, "Pseudo-Labeling (from scratch)"
+    ),
 }
 
 

@@ -7,7 +7,7 @@ the results.
 > Research question: when only a small fraction of the data is labeled, do semi-supervised
 > methods outperform purely supervised models trained on the labeled fraction alone?
 
-**Status:** phase 3 (features and supervised baselines). The full README (results, run modes, findings)
+**Status:** phase 4 (semi-supervised methods and experiments). The full README (results, run modes, findings)
 is written in phase 8.
 
 ## Setup
@@ -53,7 +53,14 @@ reviewlens --experiment configs/experiment/quick.yaml show-config
 reviewlens baselines --fraction 0.05                  # all supervised baselines, 5 % labels
 reviewlens train -m logistic_regression --save        # model used by the app and the agent
 reviewlens -e configs/experiment/char_ngrams.yaml baselines -m logistic_regression
+
+reviewlens run-experiments            # 7 methods x 5 label fractions x 5 seeds (~30 min)
+reviewlens run-experiments --fresh    # ignore saved runs and start over
+reviewlens -e configs/experiment/quick.yaml run-experiments   # small smoke test
 ```
+
+Results go to `artifacts/results/<experiment name>/` (`runs.csv`, `pseudo_labels.csv`,
+`summary.csv`, `config.yaml`). An interrupted run resumes where it stopped.
 
 ## Configuration
 

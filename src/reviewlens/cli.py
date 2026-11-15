@@ -20,6 +20,7 @@ from reviewlens import __version__
 from reviewlens.config import DEFAULT_CONFIG_PATH, AppConfig, load_config
 from reviewlens.data.download import DownloadError, download_raw_files
 from reviewlens.data.prepare import load_prepared, prepare_dataset, save_prepared
+from reviewlens.experiments import runner
 from reviewlens.experiments.train import build_experiment_features, train_and_evaluate
 from reviewlens.logging_utils import setup_logging
 from reviewlens.models.registry import available_models, get_spec
@@ -215,9 +216,25 @@ def baselines(
 
 
 @app.command("run-experiments")
-def run_experiments(ctx: typer.Context) -> None:
+def run_experiments(
+    ctx: typer.Context,
+    resume: Annotated[
+        bool,
+        typer.Option("--resume/--fresh", help="Skip runs already saved, or start over."),
+    ] = True,
+) -> None:
     """Run every method x label fraction x seed and save raw results."""
-    _not_implemented("run-experiments", phase=4)
+    cfg: AppConfig = ctx.obj
+    train_df, test_df = _load_data_or_exit(cfg)
+    try:
+        output = runner.run_experiments(cfg, train_df, test_df, resume=resume)
+    except ValueError as error:
+        typer.echo(f"Experiment failed: {error}", err=True)
+        raise typer.Exit(code=1) from error
+
+    typer.echo("macro-F1 (mean ± std over seeds); columns = labeled fraction")
+    typer.echo(runner.format_summary_table(output.summary).to_string())
+    typer.echo(f"Results saved in {output.output_dir}")
 
 
 @agent_app.command("local-test")

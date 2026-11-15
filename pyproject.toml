@@ -63,8 +63,8 @@ select = [
 ignore = ["RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.pep8-naming]
-# ML convention (as in scikit-learn): X = feature matrix, C = inverse regularization strength.
-ignore-names = ["X", "X_*", "C"]
+# ML convention (as in scikit-learn): X, Y = feature matrices, C = inverse regularization strength.
+ignore-names = ["X", "X_*", "Y", "C"]
 
 # ---------------------------------------------------------------- mypy
 [tool.mypy]
