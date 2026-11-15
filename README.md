@@ -7,7 +7,7 @@ the results.
 > Research question: when only a small fraction of the data is labeled, do semi-supervised
 > methods outperform purely supervised models trained on the labeled fraction alone?
 
-**Status:** phase 2 (data). The full README (results, run modes, findings)
+**Status:** phase 3 (features and supervised baselines). The full README (results, run modes, findings)
 is written in phase 8.
 
 ## Setup
@@ -49,6 +49,10 @@ Exploration: `notebooks/01_eda.ipynb` (install the extra with `pip install -e ".
 reviewlens --help
 reviewlens show-config
 reviewlens --experiment configs/experiment/quick.yaml show-config
+
+reviewlens baselines --fraction 0.05                  # all supervised baselines, 5 % labels
+reviewlens train -m logistic_regression --save        # model used by the app and the agent
+reviewlens -e configs/experiment/char_ngrams.yaml baselines -m logistic_regression
 ```
 
 ## Configuration

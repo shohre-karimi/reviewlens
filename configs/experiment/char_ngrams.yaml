@@ -1,0 +1,9 @@
+# Character n-gram TF-IDF instead of word n-grams.
+# Motivation (EDA): spelling variants such as بدترین / بد‌ترین or آخرین / اخرین split one word
+# into several word features; character n-grams share most of their substrings.
+#   reviewlens -e configs/experiment/char_ngrams.yaml baselines -m logistic_regression
+features:
+  analyzer: char_wb
+  ngram_min: 2
+  ngram_max: 5
+  min_df: 3

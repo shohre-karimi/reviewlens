@@ -35,6 +35,30 @@ data:
     HAPPY: positive
   min_text_chars: 2
 
+# Text features. TF-IDF and LSA are fit on training texts only (labeled + unlabeled), never test.
+features:
+  analyzer: word         # word | char_wb (character n-grams inside word boundaries)
+  ngram_min: 1
+  ngram_max: 2
+  min_df: 2
+  max_df: 0.95
+  max_features: 100000
+  sublinear_tf: true
+  lsa_components: 300    # dense LSA features, used by Label Spreading
+
+# Hyperparameters per model (passed to the factories in src/reviewlens/models/).
+# Library defaults on purpose: choosing values by looking at test scores would leak the test
+# set into model selection, and with 1 % labels there is too little data for reliable tuning.
+models:
+  naive_bayes:
+    alpha: 1.0
+  logistic_regression:
+    C: 1.0
+  linear_svm:
+    C: 1.0
+  random_forest:
+    n_estimators: 200
+
 experiment:
   name: default
   label_fractions: [0.01, 0.05, 0.10, 0.20, 1.0]

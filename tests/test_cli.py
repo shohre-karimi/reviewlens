@@ -7,6 +7,7 @@ from typer.testing import CliRunner
 
 from reviewlens import __version__
 from reviewlens.cli import app
+from reviewlens.config import AppConfig
 
 runner = CliRunner()
 
@@ -77,6 +78,45 @@ def test_data_prepare_without_raw_files_fails_cleanly(tmp_path: Path) -> None:
 
     assert result.exit_code == 1
     assert "reviewlens data download" in result.output
+
+
+def _write_config(cfg: AppConfig, path: Path) -> Path:
+    path.write_text(yaml.safe_dump(cfg.model_dump(mode="json")), encoding="utf-8")
+    return path
+
+
+def test_train_command_prints_metrics_and_saves_model(
+    toy_config: AppConfig, tmp_path: Path
+) -> None:
+    config = _write_config(toy_config, tmp_path / "config.yaml")
+
+    args = ["-c", str(config), "train", "-m", "logistic_regression", "-f", "0.5", "--save"]
+    result = runner.invoke(app, args)
+
+    assert result.exit_code == 0, result.output
+    assert "macro_f1" in result.stdout
+    assert (toy_config.paths.models_dir / "logistic_regression.joblib").is_file()
+
+
+def test_train_command_rejects_unknown_method(toy_config: AppConfig, tmp_path: Path) -> None:
+    config = _write_config(toy_config, tmp_path / "config.yaml")
+
+    result = runner.invoke(app, ["-c", str(config), "train", "-m", "magic"])
+
+    assert result.exit_code == 1
+    assert "Unknown model 'magic'" in result.output
+
+
+def test_baselines_command_compares_selected_methods(toy_config: AppConfig, tmp_path: Path) -> None:
+    config = _write_config(toy_config, tmp_path / "config.yaml")
+
+    args = ["-c", str(config), "baselines", "-m", "naive_bayes", "-m", "linear_svm"]
+    result = runner.invoke(app, args)
+
+    assert result.exit_code == 0, result.output
+    assert "naive_bayes" in result.stdout and "linear_svm" in result.stdout
+    assert "random_forest" not in result.stdout
+    assert list(toy_config.paths.results_dir.glob("baselines_*.csv"))
 
 
 def test_unimplemented_command_reports_its_phase(default_config_path: Path) -> None:

@@ -11,6 +11,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Annotated
 
+import pandas as pd
 import typer
 import yaml
 from pydantic import ValidationError
@@ -18,8 +19,11 @@ from pydantic import ValidationError
 from reviewlens import __version__
 from reviewlens.config import DEFAULT_CONFIG_PATH, AppConfig, load_config
 from reviewlens.data.download import DownloadError, download_raw_files
-from reviewlens.data.prepare import prepare_dataset, save_prepared
+from reviewlens.data.prepare import load_prepared, prepare_dataset, save_prepared
+from reviewlens.experiments.train import build_experiment_features, train_and_evaluate
 from reviewlens.logging_utils import setup_logging
+from reviewlens.models.registry import available_models, get_spec
+from reviewlens.models.text_classifier import TextClassifier, save_text_classifier
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +120,98 @@ def data_prepare(ctx: typer.Context) -> None:
         for key, value in asdict(report).items():
             typer.echo(f"  {key:16} {value}")
     typer.echo(f"Saved {train_path} and {test_path}")
+
+
+FractionOption = Annotated[
+    float, typer.Option("--fraction", "-f", min=0.0, max=1.0, help="Labeled fraction (0, 1].")
+]
+SeedOption = Annotated[int, typer.Option("--seed", "-s", help="Seed for label masking and model.")]
+
+
+def _load_data_or_exit(cfg: AppConfig) -> tuple[pd.DataFrame, pd.DataFrame]:
+    try:
+        return load_prepared(cfg)
+    except FileNotFoundError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(code=1) from error
+
+
+@app.command("train")
+def train(
+    ctx: typer.Context,
+    method: Annotated[str, typer.Option("--method", "-m", help="Model name from the registry.")],
+    fraction: FractionOption = 1.0,
+    seed: SeedOption = 0,
+    save: Annotated[
+        bool, typer.Option("--save/--no-save", help="Save the model to paths.models_dir.")
+    ] = False,
+) -> None:
+    """Train one model on a labeled fraction and evaluate it on the test set."""
+    cfg: AppConfig = ctx.obj
+    train_df, test_df = _load_data_or_exit(cfg)
+    text, label = cfg.task.text_column, cfg.task.label_column
+    try:
+        features = build_experiment_features(train_df[text], test_df[text], [method], cfg)
+        model, result = train_and_evaluate(
+            method, features, train_df[label], test_df[label], fraction, seed, cfg
+        )
+    except ValueError as error:  # unknown method, bad hyperparameters, invalid fraction
+        typer.echo(f"Training failed: {error}", err=True)
+        raise typer.Exit(code=1) from error
+
+    for key, value in result.as_row().items():
+        typer.echo(f"{key:20} {value:.4f}" if isinstance(value, float) else f"{key:20} {value}")
+    typer.echo(f"{'confusion':20} {result.confusion}  (rows = true {cfg.task.labels})")
+
+    if save:
+        classifier = TextClassifier(
+            method=method,
+            labels=list(cfg.task.labels),
+            vectorizer=features.vectorizer,
+            model=model,
+            lsa=features.lsa if get_spec(method).features == "lsa" else None,
+            metadata=result.as_row(),
+        )
+        path = save_text_classifier(classifier, cfg.paths.models_dir / f"{method}.joblib")
+        typer.echo(f"Saved model to {path}")
+
+
+@app.command("baselines")
+def baselines(
+    ctx: typer.Context,
+    fraction: FractionOption = 1.0,
+    seed: SeedOption = 0,
+    method: Annotated[
+        list[str] | None,
+        typer.Option("--method", "-m", help="Only these methods (repeatable). Default: all."),
+    ] = None,
+) -> None:
+    """Train the supervised baselines on one labeled fraction and compare them."""
+    cfg: AppConfig = ctx.obj
+    train_df, test_df = _load_data_or_exit(cfg)
+    text, label = cfg.task.text_column, cfg.task.label_column
+    supervised = [name for name in available_models() if not get_spec(name).semi_supervised]
+    methods = method or supervised
+    try:
+        features = build_experiment_features(train_df[text], test_df[text], methods, cfg)
+        rows = [
+            train_and_evaluate(
+                method, features, train_df[label], test_df[label], fraction, seed, cfg
+            )[1].as_row()
+            for method in methods
+        ]
+    except ValueError as error:
+        typer.echo(f"Training failed: {error}", err=True)
+        raise typer.Exit(code=1) from error
+
+    table = pd.DataFrame(rows).sort_values("macro_f1", ascending=False)
+    columns = ["method", "n_labeled", "macro_f1", "accuracy", "fit_seconds"]
+    typer.echo(table[columns].to_string(index=False, float_format="{:.4f}".format))
+
+    cfg.paths.results_dir.mkdir(parents=True, exist_ok=True)
+    out = cfg.paths.results_dir / f"baselines_{cfg.features.analyzer}_f{fraction}_s{seed}.csv"
+    table.to_csv(out, index=False)
+    typer.echo(f"Saved {out}")
 
 
 @app.command("run-experiments")

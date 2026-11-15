@@ -85,6 +85,25 @@ class DataConfig(_StrictModel):
         )
 
 
+class FeaturesConfig(_StrictModel):
+    """TF-IDF and LSA settings. Both are always fit on training texts only."""
+
+    analyzer: Literal["word", "char_wb"] = "word"
+    ngram_min: int = Field(default=1, ge=1)
+    ngram_max: int = Field(default=2, ge=1)
+    min_df: int = Field(default=2, ge=1)  # ignore terms seen in fewer documents
+    max_df: float = Field(default=0.95, gt=0.0, le=1.0)  # ignore terms in almost every document
+    max_features: int | None = Field(default=100_000, ge=1)
+    sublinear_tf: bool = True  # use 1 + log(tf): a word repeated 10 times is not 10x as important
+    lsa_components: int = Field(default=300, ge=2)
+
+    @model_validator(mode="after")
+    def _ngram_order(self) -> FeaturesConfig:
+        if self.ngram_min > self.ngram_max:
+            raise ValueError(f"ngram_min ({self.ngram_min}) > ngram_max ({self.ngram_max})")
+        return self
+
+
 class ExperimentConfig(_StrictModel):
     name: str = Field(default="default", min_length=1)
     label_fractions: list[float] = Field(
@@ -130,6 +149,10 @@ class AppConfig(_StrictModel):
     paths: PathsConfig = Field(default_factory=PathsConfig)
     task: TaskConfig = Field(default_factory=TaskConfig)
     data: DataConfig = Field(default_factory=DataConfig)
+    features: FeaturesConfig = Field(default_factory=FeaturesConfig)
+    # Model name -> hyperparameters passed to its factory (see models/registry.py).
+    # Models not listed here use the factory defaults.
+    models: dict[str, dict[str, Any]] = Field(default_factory=dict)
     experiment: ExperimentConfig = Field(default_factory=ExperimentConfig)
     agent: AgentConfig = Field(default_factory=AgentConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
