@@ -1,0 +1,7 @@
+# Fast smoke-test experiment, merged over configs/default.yaml:
+#   reviewlens --experiment configs/experiment/quick.yaml run-experiments
+experiment:
+  name: quick
+  label_fractions: [0.05, 1.0]
+  seeds: [0, 1]
+  methods: [logistic_regression, self_training]

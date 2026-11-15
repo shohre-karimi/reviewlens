@@ -1,0 +1,45 @@
+# Main ReviewLens configuration.
+# Relative paths are resolved from the directory the command runs in (the project root).
+# Unknown keys are rejected, so a typo here fails loudly instead of being ignored.
+
+# Fixes the train/test split, so the test set is identical in every run.
+seed: 42
+
+paths:
+  raw_dir: data/raw
+  interim_dir: data/interim
+  processed_dir: data/processed
+  models_dir: artifacts/models
+  results_dir: artifacts/results
+  figures_dir: artifacts/figures
+
+# Label schema. Label i in `labels` is encoded as integer i; -1 marks an unlabeled sample.
+# A topic task would use e.g. name: topic, labels: [delivery, quality, price, support].
+task:
+  name: sentiment
+  labels: [negative, positive]
+  text_column: text
+  label_column: label
+
+experiment:
+  name: default
+  test_size: 0.2
+  label_fractions: [0.01, 0.05, 0.10, 0.20, 1.0]
+  seeds: [0, 1, 2, 3, 4]   # vary the labeled/unlabeled masking and model randomness
+  methods:
+    - naive_bayes
+    - logistic_regression
+    - linear_svm
+    - random_forest
+    - self_training
+    - label_spreading
+    - pseudo_labeling
+
+agent:
+  provider: anthropic        # anthropic | openai_compatible
+  max_steps: 5
+  max_tokens: 1024
+  openai_base_url: null      # e.g. http://localhost:11434/v1 for Ollama
+
+logging:
+  level: INFO

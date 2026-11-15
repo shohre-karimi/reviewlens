@@ -1,0 +1,29 @@
+# Environments and secrets
+.venv/
+venv/
+.env
+
+# Data and model artifacts (never committed)
+data/
+artifacts/
+*.joblib
+*.pkl
+*.npz
+*.npy
+
+# Python build and caches
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Notebooks and editors
+.ipynb_checkpoints/
+.vscode/
+.idea/
