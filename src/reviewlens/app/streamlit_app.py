@@ -1,6 +1,6 @@
 """ReviewLens Streamlit app (Persian, right-to-left). Start it with ``make app``.
 
-Three pages, one file each in ``pages/``:
+Three pages, one file each in ``app_pages/``:
 1. Analyze  - sentiment of one review with the trained model (no language model needed)
 2. Results  - experiment results table and the main figure
 3. Agent    - chat with the tool-calling agent, with the tool-call trace of each answer
@@ -14,7 +14,7 @@ import streamlit as st
 
 from reviewlens.app.common import apply_rtl
 
-PAGES_DIR = Path(__file__).parent / "pages"
+PAGES_DIR = Path(__file__).parent / "app_pages"
 
 st.set_page_config(page_title="ReviewLens", page_icon="🔎", layout="wide")
 apply_rtl()

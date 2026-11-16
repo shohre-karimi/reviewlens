@@ -95,7 +95,7 @@ addopts = "-ra"
 source = ["reviewlens"]
 # Streamlit runs the app files as scripts (tested with AppTest in tests/test_app.py),
 # so coverage cannot attribute their lines; they are left out of the percentage.
-omit = ["*/reviewlens/app/streamlit_app.py", "*/reviewlens/app/pages/*"]
+omit = ["*/reviewlens/app/streamlit_app.py", "*/reviewlens/app/app_pages/*"]
 
 [tool.coverage.report]
 show_missing = true

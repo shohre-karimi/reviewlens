@@ -1,0 +1,11 @@
+# Streamlit settings for the ReviewLens app (read when `streamlit run` starts from the project root).
+
+[client]
+# Streamlit's built-in top-right menu (Rerun, Settings, Print, Record screen, Deploy, ...)
+# is English-only and cannot be translated. "minimal" hides it, so the Persian app shows no
+# English menu. Light/dark then follows the operating system's appearance setting.
+toolbarMode = "minimal"
+
+[browser]
+# Do not send usage statistics to Streamlit.
+gatherUsageStats = false

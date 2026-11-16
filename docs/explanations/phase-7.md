@@ -6,9 +6,9 @@
 |---|---|
 | `app/streamlit_app.py` | نقطه‌ی شروع: تنظیم صفحه، استایل راست‌به‌چپ، منوی سه صفحه (`st.navigation`) |
 | `app/common.py` | بخش‌های مشترک: خواندن تنظیمات، ابزارهای cache‌شده، CSS راست‌به‌چپ، نام فارسی برچسب‌ها |
-| `app/pages/analyze.py` | صفحه‌ی ۱: تحلیل یک نظر (بدون مدل زبانی) |
-| `app/pages/results.py` | صفحه‌ی ۲: پاسخ سؤال پژوهش، جدول macro-F1، نمودار اصلی |
-| `app/pages/agent_chat.py` | صفحه‌ی ۳: گفتگو با دستیار و ردپای ابزارهای هر پاسخ |
+| `app/app_pages/analyze.py` | صفحه‌ی ۱: تحلیل یک نظر (بدون مدل زبانی) |
+| `app/app_pages/results.py` | صفحه‌ی ۲: پاسخ سؤال پژوهش، جدول macro-F1، نمودار اصلی |
+| `app/app_pages/agent_chat.py` | صفحه‌ی ۳: گفتگو با دستیار و ردپای ابزارهای هر پاسخ |
 | `Makefile` | `make app` |
 | `tests/test_app.py` | ۱۰ تست برای هر سه صفحه با `AppTest` خود Streamlit، بدون مرورگر |
 
@@ -31,7 +31,7 @@ $env:OPENAI_MODEL="qwen2.5:7b"; $env:REVIEWLENS_EXPERIMENT="configs/agent/ollama
 اگر باگی در منطق باشد، یک جا درست می‌شود و همه‌جا اثر می‌کند.
 
 ### ۲. هر صفحه یک فایل
-سه صفحه در `pages/` جدا هستند و `streamlit_app.py` فقط منو را می‌سازد. هر فایل کوتاه و
+سه صفحه در `app_pages/` جدا هستند و `streamlit_app.py` فقط منو را می‌سازد. هر فایل کوتاه و
 مستقل است: برای تغییر یک صفحه فقط همان فایل را باز می‌کنیم. `AppTest` هم می‌تواند مستقیم به
 هر صفحه برود (`switch_page`).
 

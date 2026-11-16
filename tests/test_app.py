@@ -31,7 +31,7 @@ def use_config(cfg: AppConfig, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
 def start(page: str | None = None) -> AppTest:
     app = AppTest.from_file(str(APP), default_timeout=60).run()
     if page is not None:
-        app.switch_page(f"pages/{page}.py").run()
+        app.switch_page(f"app_pages/{page}.py").run()
     assert not app.exception, app.exception
     return app
 
