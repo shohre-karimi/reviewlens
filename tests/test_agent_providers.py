@@ -6,6 +6,9 @@ import json
 from types import SimpleNamespace
 from typing import Any
 
+import anthropic
+import httpx2
+import openai
 import pytest
 
 from reviewlens.agent import providers
@@ -138,6 +141,49 @@ def test_anthropic_other_type_errors_are_not_hidden() -> None:
     client = _anthropic_client(TypeError("some programming bug"))
     with pytest.raises(TypeError):
         client.complete("system", [UserTurn("q")], tool_specs())
+
+
+def _sdk_error(sdk: Any, name: str, status: int = 0) -> Exception:
+    """A real SDK exception, built the way the SDK builds it from an HTTP response."""
+    request = httpx2.Request("POST", "http://test.invalid/v1/messages")
+    if name == "APIConnectionError":
+        return sdk.APIConnectionError(request=request)  # type: ignore[no-any-return]
+    response = httpx2.Response(status, request=request)
+    return getattr(sdk, name)("error", response=response, body=None)  # type: ignore[no-any-return]
+
+
+SDK_ERRORS = [
+    ("AuthenticationError", 401, "auth"),
+    ("PermissionDeniedError", 403, "auth"),
+    ("NotFoundError", 404, "config"),
+    ("RateLimitError", 429, "rate_limit"),
+    ("InternalServerError", 500, "api"),
+    ("APIConnectionError", 0, "connection"),
+]
+
+
+@pytest.mark.parametrize(("name", "status", "kind"), SDK_ERRORS)
+def test_anthropic_sdk_errors_map_to_persian_kinds(name: str, status: int, kind: str) -> None:
+    client = _anthropic_client(_sdk_error(anthropic, name, status))
+    with pytest.raises(ProviderError) as caught:
+        client.complete("system", [UserTurn("q")], tool_specs())
+    assert caught.value.kind == kind
+
+
+@pytest.mark.parametrize(("name", "status", "kind"), SDK_ERRORS)
+def test_openai_sdk_errors_map_to_persian_kinds(name: str, status: int, kind: str) -> None:
+    error = _sdk_error(openai, name, status)
+
+    def fail(**request: Any) -> Any:
+        raise error
+
+    client = _openai_client(None)
+    client._client = SimpleNamespace(  # type: ignore[assignment]
+        chat=SimpleNamespace(completions=SimpleNamespace(create=fail))
+    )
+    with pytest.raises(ProviderError) as caught:
+        client.complete("system", [UserTurn("q")], tool_specs())
+    assert caught.value.kind == kind
 
 
 # --------------------------------------------------------------------------- OpenAI-compatible

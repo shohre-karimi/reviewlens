@@ -9,11 +9,12 @@ else
     VENV_PY := .venv/bin/python
 endif
 
-.PHONY: help install test lint format typecheck check app clean
+.PHONY: help install test coverage lint format typecheck check app clean
 
 help:
 	@echo "make install    create .venv and install the package with dev tools"
 	@echo "make test       run the test suite"
+	@echo "make coverage   run the tests with a coverage report"
 	@echo "make lint       ruff lint + format check + mypy"
 	@echo "make format     auto-format and auto-fix with ruff"
 	@echo "make check      lint + test"
@@ -23,11 +24,14 @@ help:
 install:
 	$(PYTHON) -m venv .venv
 	$(VENV_PY) -m pip install --upgrade pip
-	$(VENV_PY) -m pip install -e ".[dev]"
+	$(VENV_PY) -m pip install -e ".[dev,openai]"
 	$(VENV_PY) -m pre_commit install
 
 test:
 	$(VENV_PY) -m pytest
+
+coverage:
+	$(VENV_PY) -m pytest --cov=reviewlens --cov-report=term
 
 lint:
 	$(VENV_PY) -m ruff check src tests
