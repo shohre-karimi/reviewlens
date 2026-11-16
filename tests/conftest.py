@@ -70,6 +70,7 @@ def toy_config(tmp_path: Path, toy_data: ToyData) -> AppConfig:
                 "processed_dir": str(processed),
                 "models_dir": str(tmp_path / "models"),
                 "results_dir": str(tmp_path / "results"),
+                "figures_dir": str(tmp_path / "figures"),
             },
             "features": {"min_df": 1, "lsa_components": 5},
             "models": {

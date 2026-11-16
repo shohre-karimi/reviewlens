@@ -37,7 +37,16 @@ class RunResult:
     confusion: list[list[int]]
 
     def as_row(self) -> dict[str, Any]:
-        """Flat dict for one row of a results table."""
+        """Flat dict for one row of a results table.
+
+        The confusion matrix is flattened into ``cm_<true>_<pred>`` count columns (class ids),
+        so it is saved in the same CSV and can be rebuilt later for plots.
+        """
+        cells = {
+            f"cm_{true}_{pred}": count
+            for true, row in enumerate(self.confusion)
+            for pred, count in enumerate(row)
+        }
         return {
             "method": self.method,
             "label_fraction": self.label_fraction,
@@ -45,6 +54,7 @@ class RunResult:
             "n_labeled": self.n_labeled,
             "fit_seconds": round(self.fit_seconds, 3),
             **self.metrics,
+            **cells,
         }
 
 

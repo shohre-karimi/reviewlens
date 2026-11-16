@@ -136,6 +136,22 @@ def test_run_experiments_command_prints_summary(toy_config: AppConfig, tmp_path:
     assert "self_training" in result.stdout and "±" in result.stdout
     assert (toy_config.paths.results_dir / "cli" / "runs.csv").is_file()
 
+    result = runner.invoke(app, ["-c", str(config), "evaluate"])
+
+    assert result.exit_code == 0, result.output
+    assert "best_supervised" in result.stdout
+    assert (toy_config.paths.results_dir / "cli" / "report.md").is_file()
+    assert (toy_config.paths.figures_dir / "cli" / "macro_f1_vs_fraction.png").is_file()
+
+
+def test_evaluate_without_results_fails_cleanly(toy_config: AppConfig, tmp_path: Path) -> None:
+    config = _write_config(toy_config, tmp_path / "config.yaml")
+
+    result = runner.invoke(app, ["-c", str(config), "evaluate"])
+
+    assert result.exit_code == 1
+    assert "reviewlens run-experiments" in result.output
+
 
 def test_unimplemented_command_reports_its_phase(default_config_path: Path) -> None:
     result = runner.invoke(app, ["-c", str(default_config_path), "agent", "eval"])

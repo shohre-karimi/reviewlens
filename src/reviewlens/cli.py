@@ -20,6 +20,7 @@ from reviewlens import __version__
 from reviewlens.config import DEFAULT_CONFIG_PATH, AppConfig, load_config
 from reviewlens.data.download import DownloadError, download_raw_files
 from reviewlens.data.prepare import load_prepared, prepare_dataset, save_prepared
+from reviewlens.evaluation.evaluate import evaluate_experiment
 from reviewlens.experiments import runner
 from reviewlens.experiments.train import build_experiment_features, train_and_evaluate
 from reviewlens.logging_utils import setup_logging
@@ -235,6 +236,28 @@ def run_experiments(
     typer.echo("macro-F1 (mean ± std over seeds); columns = labeled fraction")
     typer.echo(runner.format_summary_table(output.summary).to_string())
     typer.echo(f"Results saved in {output.output_dir}")
+
+
+@app.command("evaluate")
+def evaluate(ctx: typer.Context) -> None:
+    """Build the report tables and figures from saved experiment results."""
+    cfg: AppConfig = ctx.obj
+    try:
+        output = evaluate_experiment(cfg)
+    except (FileNotFoundError, ValueError) as error:
+        typer.echo(f"Evaluation failed: {error}", err=True)
+        raise typer.Exit(code=1) from error
+
+    view = output.comparison.assign(
+        label_fraction=output.comparison["label_fraction"].map("{:g}".format),
+        wins=output.comparison["wins"].astype(str) + "/" + output.comparison["n_seeds"].astype(str),
+    )
+    columns = ["label_fraction", "method", "best_supervised", "diff_mean", "diff_std", "wins"]
+    typer.echo("Semi-supervised minus best supervised macro-F1 (paired by seed):")
+    typer.echo(view[columns].to_string(index=False, float_format="{:+.4f}".format))
+    typer.echo(f"Report: {output.report_path}")
+    for path in output.figures:
+        typer.echo(f"Figure: {path}")
 
 
 @agent_app.command("local-test")
