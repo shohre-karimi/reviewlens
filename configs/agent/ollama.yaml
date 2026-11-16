@@ -1,0 +1,8 @@
+# Local model mode: the agent talks to Ollama through its OpenAI-compatible endpoint.
+# Use it as an override on top of the main config:
+#   reviewlens -e configs/agent/ollama.yaml agent chat "..."
+# The model name comes from the OPENAI_MODEL environment variable (e.g. qwen2.5:7b);
+# the model must support tool calling. Ollama needs no API key.
+agent:
+  provider: openai_compatible
+  openai_base_url: http://localhost:11434/v1

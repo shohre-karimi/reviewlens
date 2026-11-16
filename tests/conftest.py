@@ -83,6 +83,38 @@ def toy_config(tmp_path: Path, toy_data: ToyData) -> AppConfig:
 
 
 @pytest.fixture
+def agent_config(toy_config: AppConfig, toy_data: ToyData) -> AppConfig:
+    """``toy_config`` plus what the agent tools read: a saved model and a results summary."""
+    from reviewlens.experiments.runner import SUMMARY_FILE, experiment_dir
+    from reviewlens.experiments.train import build_experiment_features, train_and_evaluate
+    from reviewlens.models.text_classifier import TextClassifier, save_text_classifier
+
+    method = toy_config.agent.classifier
+    features = build_experiment_features(
+        toy_data.train_texts, toy_data.test_texts, [method], toy_config
+    )
+    model, _ = train_and_evaluate(
+        method, features, toy_data.y_train, toy_data.y_test, 1.0, 0, toy_config
+    )
+    classifier = TextClassifier(method, list(toy_config.task.labels), features.vectorizer, model)
+    save_text_classifier(classifier, toy_config.paths.models_dir / f"{method}.joblib")
+
+    rows = [
+        ("logistic_regression", 0.01, 6, 0.80, 0.01),
+        ("pseudo_labeling", 0.01, 6, 0.70, 0.02),
+        ("logistic_regression", 1.0, 120, 0.90, 0.0),
+        ("pseudo_labeling", 1.0, 120, 0.90, 0.0),
+    ]
+    summary = pd.DataFrame(
+        rows, columns=["method", "label_fraction", "n_labeled", "macro_f1_mean", "macro_f1_std"]
+    ).assign(n_seeds=5, accuracy_mean=0.0, accuracy_std=0.0, fit_seconds_mean=0.1)
+    out_dir = experiment_dir(toy_config)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    summary.to_csv(out_dir / SUMMARY_FILE, index=False)
+    return toy_config
+
+
+@pytest.fixture
 def fixture_config(tmp_path: Path) -> AppConfig:
     """Default config pointed at the tiny fixture dataset, writing into a temp directory."""
     return AppConfig.model_validate(

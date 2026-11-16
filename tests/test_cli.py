@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 import yaml
 from typer.testing import CliRunner
 
-from reviewlens import __version__
+from reviewlens import __version__, cli
 from reviewlens.cli import app
 from reviewlens.config import AppConfig
+from tests.test_agent_loop import FakeClient, answer, call
 
 runner = CliRunner()
 
@@ -153,8 +155,64 @@ def test_evaluate_without_results_fails_cleanly(toy_config: AppConfig, tmp_path:
     assert "reviewlens run-experiments" in result.output
 
 
-def test_unimplemented_command_reports_its_phase(default_config_path: Path) -> None:
-    result = runner.invoke(app, ["-c", str(default_config_path), "agent", "eval"])
+def test_agent_local_test_passes_without_any_model(agent_config: AppConfig, tmp_path: Path) -> None:
+    config = _write_config(agent_config, tmp_path / "config.yaml")
+
+    result = runner.invoke(app, ["-c", str(config), "agent", "local-test"])
+
+    assert result.exit_code == 0, result.output
+    assert "12/12 tool checks passed" in result.stdout
+
+
+def test_agent_local_test_fails_without_artifacts(toy_config: AppConfig, tmp_path: Path) -> None:
+    config = _write_config(toy_config, tmp_path / "config.yaml")  # no model, no results
+
+    result = runner.invoke(app, ["-c", str(config), "agent", "local-test"])
 
     assert result.exit_code == 1
-    assert "phase 6" in result.output
+    assert "[FAIL] analyze_review" in result.stdout
+
+
+def test_agent_chat_prints_trace_and_answer(
+    agent_config: AppConfig, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake = FakeClient([call(("analyze_review", {"text": "غذا عالی بود"})), answer("مثبت است.")])
+    monkeypatch.setattr(cli, "create_client", lambda cfg, key=None: fake)
+    config = _write_config(agent_config, tmp_path / "config.yaml")
+
+    result = runner.invoke(app, ["-c", str(config), "agent", "chat", "تحلیل کن"])
+
+    assert result.exit_code == 0, result.output
+    assert "[step 1] analyze_review" in result.stdout
+    assert "مثبت است." in result.stdout
+
+
+def test_agent_chat_without_model_setup_explains_in_persian(
+    agent_config: AppConfig, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("OPENAI_MODEL", raising=False)
+    data = agent_config.model_dump(mode="json")
+    data["agent"]["provider"] = "openai_compatible"
+    config = tmp_path / "config.yaml"
+    config.write_text(yaml.safe_dump(data), encoding="utf-8")
+
+    result = runner.invoke(app, ["-c", str(config), "agent", "chat", "سلام"])
+
+    assert result.exit_code == 1
+    assert "تنظیمات مدل زبانی کامل نیست" in result.output
+    assert "Traceback" not in result.output
+
+
+def test_agent_eval_writes_the_table(
+    agent_config: AppConfig, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(cli, "create_client", lambda cfg, key=None: FakeClient([answer("x")] * 99))
+    config = _write_config(agent_config, tmp_path / "config.yaml")
+    output = tmp_path / "agent_tests.md"
+
+    args = ["-c", str(config), "agent", "eval", "--runs", "1", "-o", str(output)]
+    result = runner.invoke(app, args)
+
+    assert result.exit_code == 0, result.output
+    assert "Tool-selection accuracy" in result.stdout
+    assert "| 1 | `analyze_positive`" in output.read_text(encoding="utf-8")

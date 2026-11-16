@@ -134,8 +134,13 @@ class AgentConfig(_StrictModel):
 
     provider: Literal["anthropic", "openai_compatible"] = "anthropic"
     max_steps: int = Field(default=5, ge=1, le=20)
-    max_tokens: int = Field(default=1024, ge=1)
+    # Per model response. Newer Claude models think before answering, and thinking counts
+    # against this limit, so a small value can cut the answer off.
+    max_tokens: int = Field(default=4096, ge=1)
     openai_base_url: str | None = None
+    # Saved model used by the analyze_review tool: paths.models_dir / "<classifier>.joblib".
+    # Must be a linear model (its coefficients explain which words mattered).
+    classifier: str = Field(default="logistic_regression", min_length=1)
 
 
 class LoggingConfig(_StrictModel):

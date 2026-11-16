@@ -91,8 +91,11 @@ experiment:
 agent:
   provider: anthropic        # anthropic | openai_compatible
   max_steps: 5
-  max_tokens: 1024
+  max_tokens: 4096           # per model response; thinking counts against it
   openai_base_url: null      # e.g. http://localhost:11434/v1 for Ollama
+  # Saved model for analyze_review (artifacts/models/<classifier>.joblib). Create it with:
+  #   reviewlens train -m logistic_regression -f 1.0 --save
+  classifier: logistic_regression
 
 logging:
   level: INFO

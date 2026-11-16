@@ -19,9 +19,14 @@ dependencies = [
     "scipy>=1.11",
     "scikit-learn>=1.5",
     "matplotlib>=3.8",  # phase 5: result figures
+    "anthropic>=2.8",   # phase 6: default agent provider
 ]
 
 [project.optional-dependencies]
+# OpenAI-compatible agent provider: OpenAI itself, or a local server such as Ollama.
+openai = [
+    "openai>=3.0",
+]
 # Running the EDA notebook (VS Code / Jupyter) and executing it headless.
 notebook = [
     "ipykernel>=6.29",

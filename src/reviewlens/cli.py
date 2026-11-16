@@ -6,6 +6,7 @@ context, so every command receives the same ``AppConfig`` through ``ctx.obj``.
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import asdict
 from pathlib import Path
@@ -17,6 +18,10 @@ import yaml
 from pydantic import ValidationError
 
 from reviewlens import __version__
+from reviewlens.agent.evaluation import run_evaluation, run_local_checks, write_report
+from reviewlens.agent.loop import run_agent
+from reviewlens.agent.providers import LLMClient, ProviderError, create_client
+from reviewlens.agent.tools import ReviewTools
 from reviewlens.config import DEFAULT_CONFIG_PATH, AppConfig, load_config
 from reviewlens.data.download import DownloadError, download_raw_files
 from reviewlens.data.prepare import load_prepared, prepare_dataset, save_prepared
@@ -76,11 +81,6 @@ def main(
     setup_logging(log_level or cfg.logging.level)
     logger.debug("Config loaded path=%s experiment=%s", config, cfg.experiment.name)
     ctx.obj = cfg
-
-
-def _not_implemented(command: str, phase: int) -> None:
-    typer.echo(f"'{command}' is not implemented yet (planned for phase {phase}).", err=True)
-    raise typer.Exit(code=1)
 
 
 @app.command("show-config")
@@ -263,10 +263,65 @@ def evaluate(ctx: typer.Context) -> None:
 @agent_app.command("local-test")
 def agent_local_test(ctx: typer.Context) -> None:
     """Test all agent tools without any model or API key."""
-    _not_implemented("agent local-test", phase=6)
+    cfg: AppConfig = ctx.obj
+    outcomes = run_local_checks(ReviewTools(cfg))
+    for check, result, passed in outcomes:
+        typer.echo(f"[{'PASS' if passed else 'FAIL'}] {check.description}")
+        if not passed:
+            typer.echo(f"       output: {json.dumps(result.output, ensure_ascii=False)[:300]}")
+    n_passed = sum(passed for _, _, passed in outcomes)
+    typer.echo(f"{n_passed}/{len(outcomes)} tool checks passed")
+    if n_passed < len(outcomes):
+        raise typer.Exit(code=1)
+
+
+def _make_client_or_exit(cfg: AppConfig, api_key: str | None = None) -> LLMClient:
+    try:
+        return create_client(cfg.agent, api_key)
+    except ProviderError as error:
+        typer.echo(error.persian_message, err=True)
+        raise typer.Exit(code=1) from error
+
+
+@agent_app.command("chat")
+def agent_chat(
+    ctx: typer.Context,
+    message: Annotated[str, typer.Argument(help="Your question or a review to analyze.")],
+) -> None:
+    """Ask the agent one question; prints the answer and the tool-call trace."""
+    cfg: AppConfig = ctx.obj
+    client = _make_client_or_exit(cfg)
+    result = run_agent(message, client, ReviewTools(cfg), max_steps=cfg.agent.max_steps)
+    for entry in result.trace:
+        arguments = json.dumps(entry.arguments, ensure_ascii=False)
+        status = "error" if entry.is_error else "ok"
+        typer.echo(f"[step {entry.step}] {entry.tool}({arguments}) -> {status}")
+    typer.echo(result.answer)
+    if result.status == "provider_error":
+        raise typer.Exit(code=1)
 
 
 @agent_app.command("eval")
-def agent_eval(ctx: typer.Context) -> None:
-    """Evaluate the agent's tool selection and write docs/agent_tests.md."""
-    _not_implemented("agent eval", phase=6)
+def agent_eval(
+    ctx: typer.Context,
+    runs: Annotated[int, typer.Option("--runs", min=1, help="Runs per case.")] = 3,
+    output: Annotated[Path, typer.Option("--output", "-o", help="Markdown results table.")] = Path(
+        "docs/agent_tests.md"
+    ),
+) -> None:
+    """Evaluate the agent's tool selection with a real model and write the results table."""
+    cfg: AppConfig = ctx.obj
+    _make_client_or_exit(cfg)  # fail early with a clear message if the setup is incomplete
+    # A local OpenAI-compatible server (Ollama) accepts any key: the invalid-key case is n/a.
+    checks_keys = cfg.agent.provider == "anthropic" or cfg.agent.openai_base_url is None
+    report = run_evaluation(
+        lambda key: create_client(cfg.agent, key),
+        ReviewTools(cfg),
+        provider=cfg.agent.provider,
+        checks_api_keys=checks_keys,
+        max_steps=cfg.agent.max_steps,
+        runs=runs,
+    )
+    path = write_report(report, output)
+    typer.echo(f"Tool-selection accuracy: {report.accuracy:.1%}")
+    typer.echo(f"Results written to {path}")
