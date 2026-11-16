@@ -44,6 +44,21 @@ def app_config(
     return agent_config
 
 
+# --------------------------------------------------------------------------- menu
+
+
+def test_menu_css_has_a_persian_label_for_every_item() -> None:
+    from reviewlens.app.common import MENU_LABELS_FA, menu_fa_css
+
+    css = menu_fa_css()
+    for testid, text in MENU_LABELS_FA.items():
+        assert f'[data-testid="{testid}"]' in css
+        assert f'content: "{text}"' in css
+    assert 'content: "انتشار"' in css  # the Deploy button
+    assert "display: none" in css  # the "Made with Streamlit" footer is hidden
+    assert css.startswith("<style>") and css.endswith("</style>")
+
+
 # --------------------------------------------------------------------------- analyze
 
 

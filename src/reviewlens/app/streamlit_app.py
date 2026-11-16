@@ -16,7 +16,12 @@ from reviewlens.app.common import apply_rtl
 
 PAGES_DIR = Path(__file__).parent / "app_pages"
 
-st.set_page_config(page_title="ReviewLens", page_icon="🔎", layout="wide")
+st.set_page_config(
+    page_title="ReviewLens",
+    page_icon="🔎",
+    layout="wide",
+    initial_sidebar_state="expanded",  # the page menu is open on load (it can still be closed)
+)
 apply_rtl()
 
 page = st.navigation(

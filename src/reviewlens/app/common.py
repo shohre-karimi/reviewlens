@@ -35,6 +35,14 @@ RTL_CSS = """
     padding-right: 1.5em;
     padding-left: 0;
 }
+/* A collapsed sidebar is moved out of view to the LEFT, but RTL puts the sidebar on the
+   right, so its contents would stay visible as a thin strip over the page. Hide them; the
+   expand button (>>) is outside the sidebar and keeps working. "*" and !important are
+   needed because Streamlit sets visibility: visible on its own element containers. */
+[data-testid="stSidebar"][data-collapsed="true"],
+[data-testid="stSidebar"][data-collapsed="true"] * {
+    visibility: hidden !important;
+}
 /* Code, JSON, tables and figures stay left-to-right. */
 code, pre, [data-testid="stCode"], [data-testid="stJson"], [data-testid="stDataFrame"],
 [data-testid="stImage"], [data-testid="stVegaLiteChart"] {
@@ -43,6 +51,55 @@ code, pre, [data-testid="stCode"], [data-testid="stJson"], [data-testid="stDataF
 }
 </style>
 """
+
+
+# Streamlit's own top-right menu and Deploy button are English-only (no translation option).
+# Each label is hidden (font-size: 0) and replaced by Persian text in ::after, at the original
+# size. Items are found by their data-testid (stable). The footer ("Made with Streamlit") is
+# hidden; it has no data-testid, so it is found as the menu's only span outside a button.
+# Checked against Streamlit 1.67; after an upgrade, a label may show in English again if
+# Streamlit renames a data-testid.
+MENU_LABELS_FA = {
+    "stMainMenuItem-theme-System": "سیستم",
+    "stMainMenuItem-theme-Light": "روشن",
+    "stMainMenuItem-theme-Dark": "تیره",
+    "stMainMenuItem-rerun": "اجرای دوباره",
+    "stMainMenuItem-autoRerun": "اجرای خودکار",
+    "stMainMenuItem-clearCache": "پاک کردن حافظه‌ی موقت",
+    "stMainMenuItem-print": "چاپ",
+    "stMainMenuItem-recordScreencast": "ضبط صفحه",
+}
+# Items whose label is a bare text node inside the button (no span of its own).
+_TEXT_NODE_ITEMS = {
+    "stMainMenuItem-theme-System",
+    "stMainMenuItem-theme-Light",
+    "stMainMenuItem-theme-Dark",
+    "stMainMenuItem-autoRerun",
+}
+
+
+def menu_fa_css() -> str:
+    """CSS that shows Persian labels in Streamlit's built-in menu and Deploy button."""
+    rules = [
+        '[data-testid="stMainMenuPopover"] { direction: rtl; }',
+        '[data-testid="stMainMenuPopover"] [data-testid="stIconMaterial"] { font-size: 20px; }',
+    ]
+    for testid, text in MENU_LABELS_FA.items():
+        item = f'[data-testid="{testid}"]'
+        # Text-node labels: shrink the whole button; otherwise only its label span.
+        label = (
+            item if testid in _TEXT_NODE_ITEMS else f'{item} [data-testid="stMainMenuItemLabel"]'
+        )
+        rules.append(f"{label} {{ font-size: 0; }}")
+        rules.append(f'{label}::after {{ content: "{text}"; font-size: 14px; }}')
+    rules += [
+        '[data-testid="stAppDeployButton"] span { font-size: 0; }',
+        '[data-testid="stAppDeployButton"] span::after { content: "انتشار"; font-size: 14px; }',
+        # The "Made with Streamlit vX" footer is only a credit line with no function: hidden.
+        '[data-testid="stMainMenuPopover"] span:not([data-testid]):not(button *) '
+        "{ display: none; }",
+    ]
+    return "<style>\n" + "\n".join(rules) + "\n</style>"
 
 
 def config_paths() -> tuple[str, str]:
@@ -72,4 +129,5 @@ def label_fa(label: str) -> str:
 
 
 def apply_rtl() -> None:
-    st.markdown(RTL_CSS, unsafe_allow_html=True)
+    """Right-to-left layout plus Persian labels for Streamlit's built-in menu."""
+    st.markdown(RTL_CSS + menu_fa_css(), unsafe_allow_html=True)
