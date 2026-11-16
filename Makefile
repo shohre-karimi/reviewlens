@@ -9,7 +9,7 @@ else
     VENV_PY := .venv/bin/python
 endif
 
-.PHONY: help install test lint format typecheck check clean
+.PHONY: help install test lint format typecheck check app clean
 
 help:
 	@echo "make install    create .venv and install the package with dev tools"
@@ -17,6 +17,7 @@ help:
 	@echo "make lint       ruff lint + format check + mypy"
 	@echo "make format     auto-format and auto-fix with ruff"
 	@echo "make check      lint + test"
+	@echo "make app        start the Streamlit app"
 	@echo "make clean      remove caches and build files"
 
 install:
@@ -41,6 +42,10 @@ typecheck:
 	$(VENV_PY) -m mypy
 
 check: lint test
+
+# Local model mode: set OPENAI_MODEL and REVIEWLENS_EXPERIMENT=configs/agent/ollama.yaml first.
+app:
+	$(VENV_PY) -m streamlit run src/reviewlens/app/streamlit_app.py
 
 clean:
 	$(VENV_PY) -c "import shutil, pathlib; [shutil.rmtree(p, ignore_errors=True) for n in ('.pytest_cache', '.mypy_cache', '.ruff_cache', 'build', 'dist') for p in [pathlib.Path(n)]]; [shutil.rmtree(p, ignore_errors=True) for p in pathlib.Path('.').rglob('__pycache__') if '.venv' not in p.parts]"
