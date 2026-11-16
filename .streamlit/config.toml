@@ -1,10 +1,11 @@
 # Streamlit settings for the ReviewLens app (read when `streamlit run` starts from the project root).
 
 [client]
-# Streamlit's built-in top-right menu and Deploy button are kept ("auto": developer options
-# on localhost). Streamlit has no translation for them; their labels are replaced with
-# Persian by CSS in src/reviewlens/app/common.py (MENU_FA_CSS).
-toolbarMode = "auto"
+# "minimal" hides the Deploy button and the developer options (Rerun, Clear cache, ...).
+# With no extra menu items set in st.set_page_config, the top-right menu is hidden too.
+# (The Persian labels in src/reviewlens/app/common.py only apply if the menu is shown,
+# e.g. with toolbarMode = "auto".)
+toolbarMode = "minimal"
 
 [browser]
 # Do not send usage statistics to Streamlit.

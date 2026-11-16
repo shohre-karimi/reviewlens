@@ -43,6 +43,35 @@ RTL_CSS = """
 [data-testid="stSidebar"][data-collapsed="true"] * {
     visibility: hidden !important;
 }
+/* The Deploy button and the menu: their box packs them to its "end", which in RTL is the
+   LEFT; pack them to the start (the right). */
+[data-testid="stToolbar"] div:has(> [data-testid="stToolbarActions"]) {
+    justify-content: flex-start;
+}
+/* On wide screens (>= 768px, where the sidebar sits beside the page) move them to the
+   top-right corner of the WINDOW, above the right sidebar (whose header is empty there; its
+   collapse button is on its left side). Below 768px the sidebar opens OVER the page, and a
+   lifted header would cover the sidebar's own close button, so nothing changes there. */
+@media (min-width: 768px) {
+    [data-testid="stToolbar"] div:has(> [data-testid="stToolbarActions"]) {
+        position: fixed; /* out of the header, which in RTL ends at the sidebar edge */
+        top: 16px;
+        right: 16px;
+        margin: 0 !important;
+        width: auto !important;
+        height: auto !important; /* its default height: 100% would be the whole window */
+    }
+    /* The box is only as high as its header's layer, which is below the sidebar's
+       (999991): lift the header so the buttons are not hidden behind the sidebar. */
+    [data-testid="stHeader"] {
+        z-index: 999992;
+    }
+    /* Sidebar collapsed: its expand button (>>) takes the corner, so move left of it. */
+    .stApp:has([data-testid="stSidebar"][data-collapsed="true"])
+        [data-testid="stToolbar"] div:has(> [data-testid="stToolbarActions"]) {
+        right: 52px;
+    }
+}
 /* Code, JSON, tables and figures stay left-to-right. */
 code, pre, [data-testid="stCode"], [data-testid="stJson"], [data-testid="stDataFrame"],
 [data-testid="stImage"], [data-testid="stVegaLiteChart"] {
